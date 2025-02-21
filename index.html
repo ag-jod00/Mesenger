@@ -3,35 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Messenger</title>
+    <title>Real-Time Messenger</title>
     <link rel="stylesheet" href="styles.css">
+    <script defer src="/socket.io/socket.io.js"></script>
+    <script defer src="script.js"></script>
 </head>
 <body>
-    <div class="chat-container">
-        <div id="welcome-screen">
-            <h2>Welcome to Real-Time Messenger</h2>
-            <input type="text" id="username" placeholder="Enter your name">
-            <button onclick="joinChat()">Join Chat</button>
+    <div class="container">
+        <header>
+            <h1>Real-Time Messenger</h1>
+        </header>
+        <div class="chat-box">
+            <div id="messages"></div>
         </div>
-
-        <div id="chat-screen" style="display: none;">
-            <div class="chat-header">
-                <h3>Chat Room</h3>
-                <div id="online-users"></div>
-            </div>
-
-            <div id="chat-box"></div>
-
-            <p id="typing-status"></p>
-
-            <div class="message-input">
-                <input type="text" id="message" placeholder="Type a message...">
-                <button id="send">Send</button>
-            </div>
+        <div class="input-area">
+            <input type="text" id="username" placeholder="Enter your name...">
+            <input type="text" id="message" placeholder="Type a message...">
+            <button id="send">Send</button>
         </div>
     </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <footer>
+        <p>&copy; 2025 Real-Time Messenger. All rights reserved.</p>
+    </footer>
 </body>
 </html>

@@ -1,49 +1,52 @@
 const socket = io();
-let username = '';
 
-function joinChat() {
-    username = document.getElementById('username').value.trim();
-    if (username) {
-        socket.emit('join', username);
-        document.getElementById('welcome-screen').style.display = 'none';
-        document.getElementById('chat-screen').style.display = 'flex';
-    }
+// Check if user is already logged in
+const savedName = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("username="))
+    ?.split("=")[1];
+
+if (savedName) {
+    document.getElementById("username").value = decodeURIComponent(savedName);
 }
 
-const chatBox = document.getElementById('chat-box');
-const messageInput = document.getElementById('message');
-const sendButton = document.getElementById('send');
-const typingStatus = document.getElementById('typing-status');
-const onlineUsersDiv = document.getElementById('online-users');
+// Login Function
+document.getElementById("login-btn").addEventListener("click", async () => {
+    const username = document.getElementById("login-username").value;
+    const password = document.getElementById("login-password").value;
 
-sendButton.addEventListener('click', () => {
-    const message = messageInput.value.trim();
-    if (message) {
-        socket.emit('chatMessage', { username, message });
-        messageInput.value = '';
+    const response = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+        document.cookie = `username=${data.name}; max-age=86400`; // Save in cookie
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("chat-section").style.display = "block";
+    } else {
+        alert("Invalid credentials!");
     }
 });
 
-messageInput.addEventListener('input', () => {
-    socket.emit('typing', username);
-});
+// Sending Messages
+document.getElementById("send").addEventListener("click", () => {
+    const message = document.getElementById("message").value;
+    const sender = savedName || "Anonymous";
 
-socket.on('chatMessage', (data) => {
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message');
-    if (data.username === username) {
-        messageDiv.classList.add('self');
+    if (message.trim() !== "") {
+        socket.emit("sendMessage", { sender, message });
+        document.getElementById("message").value = "";
     }
-    messageDiv.innerHTML = `<strong>${data.username}</strong>: ${data.message} <small>(${data.time})</small>`;
-    chatBox.appendChild(messageDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
 });
 
-socket.on('typing', (user) => {
-    typingStatus.innerText = `${user} is typing...`;
-    setTimeout(() => typingStatus.innerText = '', 2000);
-});
-
-socket.on('updateUsers', (users) => {
-    onlineUsersDiv.innerHTML = users.map(user => `<p>${user}</p>`).join('');
+// Receiving Messages
+socket.on("newMessage", (data) => {
+    const messages = document.getElementById("messages");
+    const msgElement = document.createElement("p");
+    msgElement.innerHTML = `<strong>${data.sender}:</strong> ${data.message}`;
+    messages.appendChild(msgElement);
 });

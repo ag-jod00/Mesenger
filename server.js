@@ -7,6 +7,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.static(__dirname)); // Serve static files
+
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });

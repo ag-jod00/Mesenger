@@ -4,83 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Messenger</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #chat-container { width: 80%; margin: auto; }
-        #chat-box { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        #online-users { margin-bottom: 10px; }
-        #message { width: 70%; }
-        #send { width: 25%; }
-        .message { text-align: left; padding: 5px; margin: 5px; border-radius: 5px; background: #f1f1f1; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>Welcome to Real-Time Messenger</h2>
-    <div id="username-container">
-        <input type="text" id="username" placeholder="Enter your name">
-        <button onclick="joinChat()">Join Chat</button>
-    </div>
+    <div class="chat-container">
+        <div id="welcome-screen">
+            <h2>Welcome to Real-Time Messenger</h2>
+            <input type="text" id="username" placeholder="Enter your name">
+            <button onclick="joinChat()">Join Chat</button>
+        </div>
 
-    <div id="chat-container" style="display: none;">
-        <h3>Online Users:</h3>
-        <div id="online-users"></div>
+        <div id="chat-screen" style="display: none;">
+            <div class="chat-header">
+                <h3>Chat Room</h3>
+                <div id="online-users"></div>
+            </div>
 
-        <h3>Chat Room</h3>
-        <div id="chat-box"></div>
+            <div id="chat-box"></div>
 
-        <p id="typing-status"></p>
-        <input type="text" id="message" placeholder="Type a message...">
-        <button id="send">Send</button>
+            <p id="typing-status"></p>
+
+            <div class="message-input">
+                <input type="text" id="message" placeholder="Type a message...">
+                <button id="send">Send</button>
+            </div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let username = '';
-
-        function joinChat() {
-            username = document.getElementById('username').value.trim();
-            if (username) {
-                socket.emit('join', username);
-                document.getElementById('username-container').style.display = 'none';
-                document.getElementById('chat-container').style.display = 'block';
-            }
-        }
-
-        const chatBox = document.getElementById('chat-box');
-        const messageInput = document.getElementById('message');
-        const sendButton = document.getElementById('send');
-        const typingStatus = document.getElementById('typing-status');
-        const onlineUsersDiv = document.getElementById('online-users');
-
-        sendButton.addEventListener('click', () => {
-            const message = messageInput.value.trim();
-            if (message) {
-                socket.emit('chatMessage', { username, message });
-                messageInput.value = '';
-            }
-        });
-
-        messageInput.addEventListener('input', () => {
-            socket.emit('typing', username);
-        });
-
-        socket.on('chatMessage', (data) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            messageDiv.innerHTML = `<strong>${data.username}</strong>: ${data.message} <small>(${data.time})</small>`;
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-
-        socket.on('typing', (user) => {
-            typingStatus.innerText = `${user} is typing...`;
-            setTimeout(() => typingStatus.innerText = '', 2000);
-        });
-
-        socket.on('updateUsers', (users) => {
-            onlineUsersDiv.innerHTML = users.map(user => `<p>${user}</p>`).join('');
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -9,21 +9,22 @@
     <script defer src="script.js"></script>
 </head>
 <body>
-    <div id="login-section">
+    <div id="login-container">
         <h2>Login</h2>
-        <input type="text" id="login-username" placeholder="Username">
-        <input type="password" id="login-password" placeholder="Password">
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
         <button id="login-btn">Login</button>
+        <p id="login-error"></p>
     </div>
 
-    <div id="chat-section" style="display: none;">
+    <div id="chat-container" class="hidden">
         <header>
             <h1>Real-Time Messenger</h1>
+            <button id="logout-btn">Logout</button>
         </header>
-        <div class="chat-box">
-            <div id="messages"></div>
-        </div>
+        <div class="chat-box" id="messages"></div>
         <div class="input-area">
+            <input type="text" id="name" placeholder="Enter your name...">
             <input type="text" id="message" placeholder="Type a message...">
             <button id="send">Send</button>
         </div>

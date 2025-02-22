@@ -3,31 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Messenger</title>
+    <title>Real-Time Chat</title>
     <link rel="stylesheet" href="styles.css">
-    <script defer src="/socket.io/socket.io.js"></script>
-    <script defer src="script.js"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
 </head>
 <body>
-    <div id="login-container">
+    <div id="login">
         <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button id="login-btn">Login</button>
-        <p id="login-error"></p>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button onclick="login()">Login</button>
+        <p id="authMessage"></p>
     </div>
 
-    <div id="chat-container" class="hidden">
-        <header>
-            <h1>Real-Time Messenger</h1>
-            <button id="logout-btn">Logout</button>
-        </header>
-        <div class="chat-box" id="messages"></div>
-        <div class="input-area">
-            <input type="text" id="name" placeholder="Enter your name...">
-            <input type="text" id="message" placeholder="Type a message...">
-            <button id="send">Send</button>
-        </div>
+    <div id="chat" style="display:none;">
+        <h2>Chat Room</h2>
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+        <h4>Online Users:</h4>
+        <ul id="onlineUsers"></ul>
     </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

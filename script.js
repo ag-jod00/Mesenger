@@ -1,56 +1,49 @@
-const socket = io();
+const socket = io("http://localhost:3000");
 
-document.getElementById("login-btn").addEventListener("click", () => {
+// Authentication
+function login() {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    if (username === "chat01" && password === "0000") {
-        localStorage.setItem("loggedIn", "true");
-        document.getElementById("login-container").classList.add("hidden");
-        document.getElementById("chat-container").classList.remove("hidden");
-    } else {
-        document.getElementById("login-error").innerText = "Invalid credentials!";
-    }
-});
+    socket.emit("authenticate", { username, password });
 
-document.getElementById("logout-btn").addEventListener("click", () => {
-    localStorage.removeItem("loggedIn");
-    location.reload();
-});
+    socket.on("auth_success", (data) => {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("chat").style.display = "block";
+        document.getElementById("authMessage").innerText = "";
+    });
 
-// Auto-login
-if (localStorage.getItem("loggedIn") === "true") {
-    document.getElementById("login-container").classList.add("hidden");
-    document.getElementById("chat-container").classList.remove("hidden");
+    socket.on("auth_error", (data) => {
+        document.getElementById("authMessage").innerText = data.message;
+    });
 }
 
-// Send message
-document.getElementById("send").addEventListener("click", () => {
-    const name = document.getElementById("name").value;
-    const message = document.getElementById("message").value;
-    
-    if (name && message) {
-        socket.emit("chatMessage", { name, message });
-        document.getElementById("message").value = "";
+// Send Message
+function sendMessage() {
+    const messageInput = document.getElementById("messageInput");
+    const message = messageInput.value.trim();
+
+    if (message !== "") {
+        socket.emit("send_message", { username: "chat01", message });
+        messageInput.value = "";
     }
+}
+
+// Receive Message
+socket.on("receive_message", (data) => {
+    const messages = document.getElementById("messages");
+    const newMessage = document.createElement("p");
+    newMessage.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+    messages.appendChild(newMessage);
 });
 
-// Load previous messages
-socket.on("previousMessages", (messages) => {
-    const chatBox = document.getElementById("messages");
-    chatBox.innerHTML = ""; // Clear chatbox
-
-    messages.forEach(data => {
-        const msgElement = document.createElement("div");
-        msgElement.innerText = `${data.name}: ${data.message}`;
-        chatBox.appendChild(msgElement);
+// Update Online Users
+socket.on("update_users", (users) => {
+    const onlineUsers = document.getElementById("onlineUsers");
+    onlineUsers.innerHTML = "";
+    users.forEach((user) => {
+        const li = document.createElement("li");
+        li.innerText = user;
+        onlineUsers.appendChild(li);
     });
-});
-
-// Listen for new messages
-socket.on("chatMessage", (data) => {
-    const chatBox = document.getElementById("messages");
-    const msgElement = document.createElement("div");
-    msgElement.innerText = `${data.name}: ${data.message}`;
-    chatBox.appendChild(msgElement);
 });

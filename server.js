@@ -1,55 +1,73 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const mongoose = require("mongoose");
-const cors = require("cors");
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const { MongoClient } = require('mongodb');
+const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-
-app.use(cors());
-app.use(express.static(__dirname));
-
-// Connect to MongoDB
-mongoose.connect("mongodb://127.0.0.1:27017/messengerDB", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log("MongoDB Connection Error:", err));
-
-// Message Schema
-const MessageSchema = new mongoose.Schema({
-    name: String,
-    message: String,
-    timestamp: { type: Date, default: Date.now }
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
-const Message = mongoose.model("Message", MessageSchema);
+// MongoDB Connection
+const client = new MongoClient(process.env.MONGO_URI);
+let chatCollection;
 
-// When a client connects
-io.on("connection", async (socket) => {
-    console.log("User connected:", socket.id);
+async function connectDB() {
+    try {
+        await client.connect();
+        const db = client.db("chatDB");
+        chatCollection = db.collection("messages");
+        console.log("✅ Successfully connected to MongoDB!");
+    } catch (error) {
+        console.error("❌ MongoDB Connection Error:", error);
+    }
+}
+connectDB();
 
-    // Send previous messages from the database
-    const messages = await Message.find().sort({ timestamp: 1 });
-    socket.emit("previousMessages", messages);
+// Store Online Users
+let users = {};
 
-    // Listen for new messages
-    socket.on("chatMessage", async (data) => {
-        const newMessage = new Message(data);
-        await newMessage.save();
+// Socket.IO Connection
+io.on("connection", (socket) => {
+    console.log("🟢 New user connected:", socket.id);
 
-        // Send message to all clients
-        io.emit("chatMessage", data);
+    // User Authentication
+    socket.on("authenticate", ({ username, password }) => {
+        if (username === "chat01" && password === "0000") {
+            users[socket.id] = username;
+            socket.emit("auth_success", { message: "✅ Login successful!", username });
+            io.emit("update_users", Object.values(users));
+        } else {
+            socket.emit("auth_error", { message: "❌ Invalid credentials!" });
+        }
     });
 
+    // Send Message
+    socket.on("send_message", async (data) => {
+        const messageData = {
+            username: data.username,
+            message: data.message,
+            timestamp: new Date()
+        };
+        await chatCollection.insertOne(messageData); // Save to MongoDB
+        io.emit("receive_message", messageData); // Broadcast message
+    });
+
+    // Disconnect
     socket.on("disconnect", () => {
-        console.log("User disconnected");
+        console.log("🔴 User disconnected:", socket.id);
+        delete users[socket.id];
+        io.emit("update_users", Object.values(users));
     });
 });
 
-// Start server
-server.listen(3000, () => {
-    console.log("Server running on port 3000");
+// Start Server
+server.listen(process.env.PORT || 3000, () => {
+    console.log(`🚀 Server running on http://localhost:${process.env.PORT || 3000}`);
 });

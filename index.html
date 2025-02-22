@@ -1,0 +1,90 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Atlas Messenger</title>
+    <style>
+        /* CSS Styles */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .login-form { max-width: 300px; margin: 50px auto; }
+        .chat-container { max-width: 800px; margin: 0 auto; display: none; }
+        #messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+        .message { margin-bottom: 10px; padding: 5px; background: #f0f0f0; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 8px; margin: 5px 0; }
+        button { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div class="login-form">
+        <h2>Atlas Messenger Login</h2>
+        <input type="text" id="username" placeholder="Username" value="">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="chat-container">
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Load saved username
+        document.getElementById('username').value = localStorage.getItem('username') || '';
+
+        let socket;
+        
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    localStorage.setItem('username', username);
+                    setupChat();
+                } else {
+                    alert('Invalid credentials');
+                }
+            });
+        }
+
+        function setupChat() {
+            document.querySelector('.login-form').style.display = 'none';
+            document.querySelector('.chat-container').style.display = 'block';
+            
+            socket = io();
+            
+            socket.on('previousMessages', messages => {
+                messages.forEach(addMessage);
+            });
+
+            socket.on('newMessage', addMessage);
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            const username = localStorage.getItem('username');
+            if(message) {
+                socket.emit('sendMessage', { username, message });
+                document.getElementById('messageInput').value = '';
+            }
+        }
+
+        function addMessage(msg) {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `<strong>${msg.username}:</strong> ${msg.message}`;
+            document.getElementById('messages').appendChild(div);
+        }
+    </script>
+</body>
+</html>

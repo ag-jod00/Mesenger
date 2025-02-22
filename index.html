@@ -1,90 +1,150 @@
-<!-- index.html -->
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Atlas Messenger</title>
-    <style>
-        /* CSS Styles */
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        .login-form { max-width: 300px; margin: 50px auto; }
-        .chat-container { max-width: 800px; margin: 0 auto; display: none; }
-        #messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
-        .message { margin-bottom: 10px; padding: 5px; background: #f0f0f0; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 8px; margin: 5px 0; }
-        button { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <!-- Login Form -->
-    <div class="login-form">
-        <h2>Atlas Messenger Login</h2>
-        <input type="text" id="username" placeholder="Username" value="">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Login</button>
-    </div>
+<script>
+    // DOM Elements
+    const loginForm = document.querySelector('.login-form');
+    const chatContainer = document.querySelector('.chat-container');
+    const messageInput = document.getElementById('messageInput');
+    
+    // State management
+    let socket;
+    let retries = 0;
+    const maxRetries = 3;
 
-    <!-- Chat Interface -->
-    <div class="chat-container">
-        <div id="messages"></div>
-        <input type="text" id="messageInput" placeholder="Type your message...">
-        <button onclick="sendMessage()">Send</button>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
         // Load saved username
-        document.getElementById('username').value = localStorage.getItem('username') || '';
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername) {
+            document.getElementById('username').value = savedUsername;
+        }
 
-        let socket;
-        
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        // Enter key handlers
+        document.getElementById('password').addEventListener('keypress', handleEnterKey);
+        messageInput.addEventListener('keypress', handleEnterKey);
+    });
 
-            fetch('/login', {
+    function handleEnterKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (e.target.id === 'password') {
+                login();
+            } else {
+                sendMessage();
+            }
+        }
+    }
+
+    async function login() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        try {
+            const response = await fetch('/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    localStorage.setItem('username', username);
-                    setupChat();
-                } else {
-                    alert('Invalid credentials');
+            });
+
+            if (!response.ok) throw new Error('Login failed');
+            
+            const data = await response.json();
+            if (data.success) {
+                localStorage.setItem('username', username);
+                document.getElementById('password').value = ''; // Clear password
+                setupChat();
+            } else {
+                throw new Error('Invalid credentials');
+            }
+        } catch (error) {
+            console.error('Login Error:', error);
+            showNotification(error.message || 'Login failed. Please try again.');
+        }
+    }
+
+    function setupChat() {
+        loginForm.style.display = 'none';
+        chatContainer.style.display = 'block';
+        
+        // Initialize Socket.IO connection
+        socket = io(window.location.origin, {
+            reconnectionAttempts: maxRetries,
+            auth: {
+                username: localStorage.getItem('username')
+            }
+        });
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            retries = 0; // Reset retry counter
+            console.log('Connected to server');
+        });
+
+        socket.on('previousMessages', messages => {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = ''; // Clear existing messages
+            messages.forEach(addMessage);
+            scrollToBottom();
+        });
+
+        socket.on('newMessage', addMessage);
+        
+        socket.on('connect_error', (error) => {
+            console.error('Connection Error:', error);
+            if (retries < maxRetries) {
+                const delay = Math.pow(2, retries) * 1000;
+                retries++;
+                setTimeout(() => socket.connect(), delay);
+            } else {
+                showNotification('Connection failed. Please refresh the page.');
+            }
+        });
+
+        socket.on('disconnect', (reason) => {
+            if (reason === 'io server disconnect') {
+                socket.connect();
+            }
+        });
+    }
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        const username = localStorage.getItem('username');
+        
+        if (message) {
+            socket.emit('sendMessage', { username, message }, (ack) => {
+                if (ack?.error) {
+                    showNotification('Message failed to send');
                 }
             });
+            messageInput.value = '';
         }
+    }
 
-        function setupChat() {
-            document.querySelector('.login-form').style.display = 'none';
-            document.querySelector('.chat-container').style.display = 'block';
-            
-            socket = io();
-            
-            socket.on('previousMessages', messages => {
-                messages.forEach(addMessage);
-            });
+    function addMessage(msg) {
+        const messagesDiv = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `
+            <strong>${msg.username}:</strong> 
+            <span>${msg.message}</span>
+            <small>${new Date(msg.timestamp).toLocaleTimeString()}</small>
+        `;
+        messagesDiv.appendChild(div);
+        scrollToBottom();
+    }
 
-            socket.on('newMessage', addMessage);
-        }
+    function scrollToBottom() {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 
-        function sendMessage() {
-            const message = document.getElementById('messageInput').value;
-            const username = localStorage.getItem('username');
-            if(message) {
-                socket.emit('sendMessage', { username, message });
-                document.getElementById('messageInput').value = '';
-            }
-        }
-
-        function addMessage(msg) {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.innerHTML = `<strong>${msg.username}:</strong> ${msg.message}`;
-            document.getElementById('messages').appendChild(div);
-        }
-    </script>
-</body>
-</html>
+    function showNotification(text, duration = 3000) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = text;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, duration);
+    }
+</script>

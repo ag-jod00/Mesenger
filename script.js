@@ -1,52 +1,40 @@
 const socket = io();
 
-// Check if user is already logged in
-const savedName = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("username="))
-    ?.split("=")[1];
+document.getElementById("login-btn").addEventListener("click", () => {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
 
-if (savedName) {
-    document.getElementById("username").value = decodeURIComponent(savedName);
-}
-
-// Login Function
-document.getElementById("login-btn").addEventListener("click", async () => {
-    const username = document.getElementById("login-username").value;
-    const password = document.getElementById("login-password").value;
-
-    const response = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-        document.cookie = `username=${data.name}; max-age=86400`; // Save in cookie
-        document.getElementById("login-section").style.display = "none";
-        document.getElementById("chat-section").style.display = "block";
+    if (username === "chat01" && password === "0000") {
+        localStorage.setItem("loggedIn", "true");
+        document.getElementById("login-container").classList.add("hidden");
+        document.getElementById("chat-container").classList.remove("hidden");
     } else {
-        alert("Invalid credentials!");
+        document.getElementById("login-error").innerText = "Invalid credentials!";
     }
 });
 
-// Sending Messages
-document.getElementById("send").addEventListener("click", () => {
-    const message = document.getElementById("message").value;
-    const sender = savedName || "Anonymous";
+document.getElementById("logout-btn").addEventListener("click", () => {
+    localStorage.removeItem("loggedIn");
+    location.reload();
+});
 
-    if (message.trim() !== "") {
-        socket.emit("sendMessage", { sender, message });
+if (localStorage.getItem("loggedIn") === "true") {
+    document.getElementById("login-container").classList.add("hidden");
+    document.getElementById("chat-container").classList.remove("hidden");
+}
+
+document.getElementById("send").addEventListener("click", () => {
+    const name = document.getElementById("name").value;
+    const message = document.getElementById("message").value;
+    if (name && message) {
+        socket.emit("chatMessage", { name, message });
         document.getElementById("message").value = "";
     }
 });
 
-// Receiving Messages
-socket.on("newMessage", (data) => {
-    const messages = document.getElementById("messages");
-    const msgElement = document.createElement("p");
-    msgElement.innerHTML = `<strong>${data.sender}:</strong> ${data.message}`;
-    messages.appendChild(msgElement);
+socket.on("chatMessage", (data) => {
+    const chatBox = document.getElementById("messages");
+    const msgElement = document.createElement("div");
+    msgElement.innerText = `${data.name}: ${data.message}`;
+    chatBox.appendChild(msgElement);
 });

@@ -15,7 +15,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 app.use(helmet());
 app.use(cors({
   origin: NODE_ENV === 'production' 
-    ? 'https://your-render-app.onrender.com' 
+    ? 'https://mesenger-c5hf.onrender.com' 
     : 'http://localhost:3000',
   credentials: true
 }));
@@ -70,7 +70,7 @@ const server = app.listen(PORT, () => {
 const io = socketio(server, {
   cors: {
     origin: NODE_ENV === 'production'
-      ? 'https://your-render-app.onrender.com'
+      ? 'https://mesenger-c5hf.onrender.com'
       : 'http://localhost:3000',
     methods: ['GET', 'POST']
   },
